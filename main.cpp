@@ -1,25 +1,17 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <fstream>
+#include "Shader.h"
 
 #define DISPLAY_WIDTH 800
 #define DISPLAY_HEIGHT 600
 
 // ak niektore gl funkcie davaju segfault, mozno je ta funkcia z opengl ktoru som s GLEW neskontroloval ze mam
 
-const char *vertex_shader_source = "#version 330 core\n"
-        "layout (location = 0) in vec3 aPos;\n"
-        "\n"
-        "void main(){\n"
-        "    gl_Position = vec4(aPos.x,aPos.y,aPos.z,1.0);\n"
-        "}\0";
-
-const char *fragment_shader_source = "#version 330 core\n"
-        "out vec4 FragColor;\n"
-        "\n"
-        "void main(){\n"
-        "    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-        "}\0";
+Shader *shader;
+GLuint VAO;
+GLuint VBO;
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     glViewport(0, 0, width, height);
@@ -31,70 +23,14 @@ void process_input(GLFWwindow *window) {
     }
 }
 
-unsigned int VBO;
-unsigned int VAO;
-unsigned int vertex_shader;
-unsigned int fragment_shader;
-unsigned int shader_program;
-
-void init_shaders(){
-    int success;
-    char infoLog[512];
-
-    // vertex shader
-    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_shader_source, NULL);
-    glCompileShader(vertex_shader);
-
-    // vertex shader check
-    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(vertex_shader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    // fragment shader
-    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_shader_source, NULL);
-    glCompileShader(fragment_shader);
-
-    // fragment shader check
-    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(fragment_shader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    // shader program
-    shader_program = glCreateProgram();
-    glAttachShader(shader_program, vertex_shader);
-    glAttachShader(shader_program, fragment_shader);
-    glLinkProgram(shader_program);
-
-    // shader program check
-    glGetProgramiv(shader_program, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shader_program, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    glUseProgram(shader_program);
-
-    // cleanup
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
-}
-
 void init() {
+    shader = new Shader("/home/matej/CLionProjects/OpenGLtest/test_shader.glsl",
+                        "/home/matej/CLionProjects/OpenGLtest/test2_shader.glsl");
 
-    init_shaders();
-
-    // -----------------
-
-    float vertices[] = {
-            -0.5f, -0.5f, 0.0f,
-            0.5f, -0.5f, 0.0f,
-            0.0f, 0.5f, 0.0f
+    float vertices_color[] = {
+            -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,  // top right
+            0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,  // bottom right
+            0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f  // bottom left
     };
 
     // trojuholnik
@@ -104,10 +40,16 @@ void init() {
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices_color), vertices_color, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
+    // na poziciu 0 (location = 0) davam data dlhe 3, ktore su floaty, nenormalizuj ich, jedny data maju X bajtov a zacinaj ich citat s 0 offsetom
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 2 * 3 * sizeof(float), (void *) 0);
     glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 2 * 3 * sizeof(float), (void *) (3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }
 
 void update() {
@@ -119,7 +61,7 @@ void render() {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glUseProgram(shader_program);
+    shader->use();
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 }
