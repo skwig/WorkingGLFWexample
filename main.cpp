@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include "Shader.h"
+#include "Camera.h"
 #include "stb_image.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -12,32 +13,82 @@
 #define DISPLAY_WIDTH 800
 #define DISPLAY_HEIGHT 600
 
+#define MOUSE_SENSITIVITY 0.02f
+
 // ak niektore gl funkcie davaju segfault, mozno je ta funkcia z opengl ktoru som s GLEW neskontroloval ze mam
 
+Camera *camera;
 Shader *shader;
+
 GLuint VAO;
 GLuint VBO;
 GLuint EBO;
 GLuint texture_0;
 GLuint texture_1;
-glm::mat4 transform;
+//glm::mat4 transform;
 glm::mat4 projection;
 glm::mat4 model;
 glm::mat4 view;
+
+
+float lastTime;
+
+float lastX = DISPLAY_WIDTH / 2;
+float lastY = DISPLAY_HEIGHT / 2;
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-void process_input(GLFWwindow *window) {
+bool firstMouse = true;
+
+void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
+
+    if (firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // reversed since y-coordinates range from bottom to top
+
+    lastX = xpos;
+    lastY = ypos;
+
+    camera->processLook(xoffset, yoffset, true);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+    camera->processZoom(yoffset);
+}
+
+void process_input(GLFWwindow *window, float delta) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        camera->processMovement(Camera_Movement::FORWARD, delta);
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        camera->processMovement(Camera_Movement::BACKWARD, delta);
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        camera->processMovement(Camera_Movement::LEFT, delta);
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        camera->processMovement(Camera_Movement::RIGHT, delta);
     }
 }
 
 void init() {
+    lastTime = 0;
+
     shader = new Shader("/home/matej/CLionProjects/OpenGLtest/vertex_shader.glsl",
                         "/home/matej/CLionProjects/OpenGLtest/fragment_shader.glsl");
+
+    camera = new Camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 //    float vertices[] = {
 //            // positions          // colors           // texture coords
@@ -48,53 +99,47 @@ void init() {
 //    };
 
     float vertices[] = {
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
 
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
 
-            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
 
-            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
 
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-            0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
 
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-    };
-
-
-    unsigned int indices[] = {
-            0, 1, 3, // first triangle
-            1, 2, 3  // second triangle
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f
     };
 
     // trojuholnik
@@ -171,19 +216,32 @@ void init() {
 
 
     // matrix
-    transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
-    transform = glm::scale(transform, glm::vec3(0.5, 0.5, 0.5));
+//    transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
+//    transform = glm::scale(transform, glm::vec3(0.5, 0.5, 0.5));
 
     // coordinate system
-    projection = glm::perspective(glm::radians(45.0f), (float)DISPLAY_WIDTH/(float)DISPLAY_HEIGHT, 0.1f, 100.0f);
+    projection = glm::perspective(glm::radians(45.0f), (float) DISPLAY_WIDTH / (float) DISPLAY_HEIGHT, 0.1f, 100.0f);
     model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-
+//    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+    view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f),
+                       glm::vec3(0.0f, 0.0f, 0.0f),
+                       glm::vec3(0.0f, 1.0f, 0.0f));
+    // camera
+//    cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+//    cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+//    cameraDirection = glm::normalize(cameraPos - cameraTarget);
+//    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+//    cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+//    cameraUp = glm::cross(cameraDirection, cameraRight);
+//    cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+//
+//    direction = glm::vec3(0.0f, 0.0f, 0.0f);
 }
 
-
-void update() {
-
+void update(float delta) {
+//    direction.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
+//    direction.y = sin(glm::radians(pitch));
+//    direction.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
 }
 
 void render() {
@@ -201,14 +259,17 @@ void render() {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, texture_1);
 
-    unsigned int transform_location = glGetUniformLocation(shader->get_shader_program(), "transform");
-    glUniformMatrix4fv(transform_location, 1, GL_FALSE, glm::value_ptr(transform));
+//    unsigned int transform_location = glGetUniformLocation(shader->get_shader_program(), "transform");
+//    glUniformMatrix4fv(transform_location, 1, GL_FALSE, glm::value_ptr(transform));
 
-    model = glm::rotate(model, glm::radians(1.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+//    model = glm::rotate(model, glm::radians(1.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+    view = camera->getViewMatrix();
+    shader->setMat4("view", view);
+
+    projection = glm::perspective(glm::radians(camera->getZoom()), (float)DISPLAY_WIDTH / (float)DISPLAY_HEIGHT, 0.1f, 100.0f);
+    shader->setMat4("projection", projection);
 
     shader->setMat4("model", model);
-    shader->setMat4("view", view);
-    shader->setMat4("projection", projection);
 
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -226,10 +287,13 @@ int main() {
         glfwTerminate();
         return -1;
     }
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwMakeContextCurrent(window);
 
     // callbacky
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
     // glew init
     glewExperimental = GL_TRUE;
@@ -249,12 +313,17 @@ int main() {
     init();
 
     // spustenie renderovania
+    float delta;
+
     while (!glfwWindowShouldClose(window)) {
+        delta = glfwGetTime() - lastTime;
+        lastTime = glfwGetTime();
+
         // input
-        process_input(window);
+        process_input(window, delta);
 
         // update
-        update();
+        update(delta);
 
         // render
         render();

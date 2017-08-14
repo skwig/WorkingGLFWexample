@@ -7,7 +7,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(SOURCE_FILES main.cpp Shader.cpp Shader.h stb_image.cpp stb_image.h)
+set(SOURCE_FILES main.cpp Shader.cpp Shader.h stb_image.cpp stb_image.h Camera.cpp Camera.h)
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 find_package(GLEW REQUIRED)
