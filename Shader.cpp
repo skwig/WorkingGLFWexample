@@ -13,7 +13,6 @@ Shader::Shader(const std::string &vertex_path, const std::string &fragment_path)
     shaders[0] = create_shader(load_file(vertex_path), GL_VERTEX_SHADER);
     shaders[1] = create_shader(load_file(fragment_path), GL_FRAGMENT_SHADER);
 
-    std::cout << "Here" << std::endl;
     // attach
     for (int j = 0; j < SHADER_COUNT; ++j) {
         glAttachShader(shader_program, shaders[j]);

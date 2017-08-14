@@ -4,6 +4,10 @@
 #include <fstream>
 #include "Shader.h"
 #include "stb_image.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 
 #define DISPLAY_WIDTH 800
 #define DISPLAY_HEIGHT 600
@@ -16,6 +20,7 @@ GLuint VBO;
 GLuint EBO;
 GLuint texture_0;
 GLuint texture_1;
+glm::mat4 transform;
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     glViewport(0, 0, width, height);
@@ -96,7 +101,7 @@ void init() {
     //
     stbi_set_flip_vertically_on_load(true);
     texture_data = stbi_load("/home/matej/CLionProjects/OpenGLtest/awesomeface.png",
-                                            &texture_width, &texture_height, &texture_channel_count, 0);
+                             &texture_width, &texture_height, &texture_channel_count, 0);
 
     glGenTextures(1, &texture_1);
     glBindTexture(GL_TEXTURE_2D, texture_1);
@@ -115,7 +120,13 @@ void init() {
     }
 
     stbi_image_free(texture_data);
+
+
+    // matrix
+    transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
+    transform = glm::scale(transform, glm::vec3(0.5, 0.5, 0.5));
 }
+
 
 void update() {
 
@@ -132,9 +143,12 @@ void render() {
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture_0);
-//
+
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, texture_1);
+
+    unsigned int transform_location = glGetUniformLocation(shader->get_shader_program(), "transform");
+    glUniformMatrix4fv(transform_location, 1, GL_FALSE, glm::value_ptr(transform));
 
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

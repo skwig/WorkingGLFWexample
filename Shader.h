@@ -19,6 +19,10 @@ public:
 
     void setInt(const std::string &name, int value) const;
 
+    GLuint get_shader_program() {
+        return shader_program;
+    }
+
 protected:
 
 private:
