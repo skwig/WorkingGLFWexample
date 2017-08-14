@@ -8,6 +8,9 @@
 
 #include <GL/glew.h>
 #include <iostream>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 class Shader {
 public:
@@ -18,6 +21,8 @@ public:
     void use();
 
     void setInt(const std::string &name, int value) const;
+
+    void setMat4(const std::string &name, glm::mat4 value) const;
 
     GLuint get_shader_program() {
         return shader_program;

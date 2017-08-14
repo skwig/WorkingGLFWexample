@@ -5,6 +5,9 @@
 #include "Shader.h"
 #include <iostream>
 #include <fstream>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 Shader::Shader(const std::string &vertex_path, const std::string &fragment_path) {
 
@@ -104,4 +107,9 @@ void Shader::check_error(GLuint shader, GLuint flag, bool isProgram, const std::
 
 void Shader::setInt(const std::string &name, int value) const {
     glUniform1i(glGetUniformLocation(shader_program, name.c_str()), value);
+}
+
+void Shader::setMat4(const std::string &name, glm::mat4 value) const {
+    int loc = glGetUniformLocation(shader_program, name.c_str());
+    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(value));
 }
