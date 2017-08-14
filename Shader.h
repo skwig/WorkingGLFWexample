@@ -17,6 +17,8 @@ public:
 
     void use();
 
+    void setInt(const std::string &name, int value) const;
+
 protected:
 
 private:

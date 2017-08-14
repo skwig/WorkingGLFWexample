@@ -102,3 +102,7 @@ void Shader::check_error(GLuint shader, GLuint flag, bool isProgram, const std::
         std::cerr << errorMessage << ": '" << error << "'" << std::endl;
     }
 }
+
+void Shader::setInt(const std::string &name, int value) const {
+    glUniform1i(glGetUniformLocation(shader_program, name.c_str()), value);
+}
